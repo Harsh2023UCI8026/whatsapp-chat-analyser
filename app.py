@@ -1,4 +1,27 @@
+
+
 import streamlit as st
+st.markdown("""
+###  How to Use This Tool
+
+1️⃣ **WhatsApp → Export Chat**  
+- Open any chat → Tap 3 dots → More → Export Chat  
+- Select Without Media 
+- A ZIP file will be downloaded  
+
+2️⃣ Extract the ZIP  
+- Inside it, you’ll find a **.txt** chat file  
+
+3️⃣ **Upload the .txt file here**  
+- Click **Browse files** and select your chat file  
+
+4️⃣ **Choose User or Overall**  
+- Select a specific person or analyze the entire chat  
+
+5️⃣ **Click “Show Analysis”**  
+- View messages stats, wordcloud, emoji analysis & more 🚀
+
+""")
 import preprocessor, helper
 import re
 import matplotlib.pyplot as plt
