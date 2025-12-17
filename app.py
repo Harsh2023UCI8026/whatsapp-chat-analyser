@@ -106,7 +106,7 @@ if uploaded_file is not None:
 
         with col2:
             st.header("Most Busy Month")
-            busy_month=helper.monthly_activity_map(selected_user,df)
+            busy_month=helper.month_activity_map(selected_user,df)
             fig,ax=plt.subplots()
             ax.bar(busy_month.index, busy_month.values, color='pink')
             plt.xticks(rotation=45)
