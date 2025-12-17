@@ -85,62 +85,74 @@
 import re
 import pandas as pd
 
-# UNIVERSAL DATE PARSER
+
+# UNIVERSAL DATETIME PARSER
 def smart_datetime_parser(date_str):
+    if date_str is None:
+        return None
+
+    # Fix unicode spaces
     date_str = date_str.replace("\u202f", " ").replace("\u202F", " ")
 
     formats = [
-        "%d/%m/%y, %I:%M %p -",     # 2-digit year + AM/PM
-        "%d/%m/%Y, %I:%M %p -",     # 4-digit year + AM/PM
-        "%d/%m/%y, %H:%M -",        # 2-digit year + 24h
-        "%d/%m/%Y, %H:%M -",        # 4-digit year + 24h
+        "%d/%m/%y, %I:%M %p -",
+        "%d/%m/%Y, %I:%M %p -",
+        "%d/%m/%y, %H:%M -",
+        "%d/%m/%Y, %H:%M -",
+        "%m/%d/%y, %I:%M %p -",
+        "%m/%d/%Y, %I:%M %p -",
+        "%m/%d/%y, %H:%M -",
+        "%m/%d/%Y, %H:%M -",
     ]
 
     for fmt in formats:
         try:
             return pd.to_datetime(date_str, format=fmt)
         except:
-            pass
+            continue
 
-    return None  # fallback
+    return None
 
 
 def preprocess(data):
 
-    # REGEX that works for AM/PM OR 24-hour
+    # Universal WhatsApp regex
     pattern = r"(\d{1,2}/\d{1,2}/\d{2,4}, \d{1,2}:\d{2}(?: ?[APMapm]{2})? - )"
 
-    # SPLIT messages using regex
-    split_data = re.split(pattern, data)[1:]
+    parts = re.split(pattern, data)
 
     dates = []
     messages = []
 
-    for i in range(0, len(split_data), 2):
-        dates.append(split_data[i])
-        messages.append(split_data[i+1])
+    for i in range(1, len(parts), 2):
+        dates.append(parts[i])
+        messages.append(parts[i + 1])
 
     df = pd.DataFrame({'raw_date': dates, 'user_message': messages})
 
-    # CLEAN Unicode spaces
+    # When regex fails completely → empty DF
+    if df.empty:
+        raise ValueError("Chat format not recognized. Try exporting again WITHOUT MEDIA.")
+
+    # Clean unicode
     df['raw_date'] = df['raw_date'].str.replace("\u202f", " ").str.replace("\u202F", " ")
 
-    # Parse date using universal function
+    # Parse datetime
     df['date'] = df['raw_date'].apply(smart_datetime_parser)
 
-    # DROP rows where date failed to parse
+    # Remove rows that failed to parse
     df = df.dropna(subset=['date']).copy()
 
-    # SEPARATE user & message
+    # Separate user and message
     users = []
     msgs = []
 
     for m in df['user_message']:
-        parts = re.split(r'^(.*?):\s', m, maxsplit=1)
+        temp = re.split(r'^(.*?):\s', m, maxsplit=1)
 
-        if len(parts) == 3:
-            users.append(parts[1])
-            msgs.append(parts[2])
+        if len(temp) == 3:
+            users.append(temp[1])
+            msgs.append(temp[2])
         else:
             users.append("Group Notification aaya hai harsh")
             msgs.append(m)
@@ -148,7 +160,7 @@ def preprocess(data):
     df['user'] = users
     df['message'] = msgs
 
-    # EXTRACT date attributes
+    # Extract components
     df['year'] = df['date'].dt.year
     df['month_num'] = df['date'].dt.month
     df['month'] = df['date'].dt.month_name()
@@ -157,7 +169,7 @@ def preprocess(data):
     df['hour'] = df['date'].dt.hour
     df['minute'] = df['date'].dt.minute
 
-    # PERIOD (hour slots)
+    # Create time periods
     period = []
     for hour in df['hour']:
         if hour == 23:
@@ -170,3 +182,4 @@ def preprocess(data):
     df['period'] = period
 
     return df
+
