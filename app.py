@@ -38,7 +38,8 @@ if uploaded_file is not None:
 
     #fetch unique users
     user_list=df['user'].unique().tolist()
-    user_list.remove('Group Notification aaya hai harsh')
+    if 'Group Notification aaya hai harsh' in user_list:
+        user_list.remove('Group Notification aaya hai harsh')
 
     user_list.sort(key=str.lower)
     user_list.insert(0,'Overall')
