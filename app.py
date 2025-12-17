@@ -19,7 +19,16 @@ st.markdown("""
 - Select a specific person or analyze the entire chat
 
 5️⃣ **Click “Show Analysis”**
-- View messages stats, wordcloud, emoji analysis & more 🚀
+- View messages stats, wordcloud, emoji analysis & more 
+
+
+Important Note About Date Format
+
+Aapke phone ki WhatsApp date format setting AM/PM (12-hour) honi chahiye.
+Agar aapke chat export me 24-hour format (jaise 21:03) ya different regional format hoga, to kuch parts of analysis sahi kaam nahi kar paayenge.
+
+Please switch your phone's time format to 12-hour (AM/PM)
+fir chat ko re-export karein for best results.
 
 """)
 import preprocessor, helper
