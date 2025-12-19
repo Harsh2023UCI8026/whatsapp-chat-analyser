@@ -74,8 +74,7 @@ import pandas as pd
 
 def preprocess(data):
 
-    # 🔥 Match BOTH formats:
-    # 12-hour (AM/PM)  AND  24-hour
+    # Match both 12-hr and 24-hr WhatsApp formats
     pattern = r'\d{1,2}\/\d{1,2}\/\d{2,4},\s+\d{1,2}:\d{2}(?:\s?[APap][Mm])?\s+-'
 
     messages = re.split(pattern, data)[1:]
@@ -86,17 +85,15 @@ def preprocess(data):
         'raw_date': dates
     })
 
-    # Fix WhatsApp hidden space (U+202F)
-    df['raw_date'] = df['raw_date'].astype(str).str.replace('\u202f', ' ', regex=False)
+    # Fix WhatsApp hidden space
+    df['raw_date'] = df['raw_date'].str.replace('\u202f', ' ', regex=False)
 
-    # ✅ AUTO-detect datetime format
+    # Convert to datetime (DO NOT DROP NaT)
     df['date'] = pd.to_datetime(
         df['raw_date'],
-        errors='coerce'   # invalid → NaT (no crash)
+        errors='coerce',
+        dayfirst=True
     )
-
-    # Drop rows where date couldn't be parsed
-    df = df.dropna(subset=['date'])
 
     # Split user & message
     users = []
@@ -115,7 +112,7 @@ def preprocess(data):
     df['message'] = msgs
     df.drop(columns=['user_message'], inplace=True)
 
-    # Date features
+    # ✅ Date features (NaT-safe)
     df['year'] = df['date'].dt.year
     df['month_num'] = df['date'].dt.month
     df['month'] = df['date'].dt.month_name()
@@ -125,9 +122,9 @@ def preprocess(data):
     df['hour'] = df['date'].dt.hour
     df['minute'] = df['date'].dt.minute
 
-    # Create time periods (for heatmap)
+    # Period (NaN-safe)
     df['period'] = df['hour'].apply(
-        lambda h: f"{h}-{(h+1)%24}"
+        lambda h: "NA" if pd.isna(h) else f"{int(h)}-{(int(h)+1)%24}"
     )
 
     return df
