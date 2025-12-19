@@ -105,6 +105,8 @@ def emoji_helper(selected_user, df):
 
 
 def monthly_timeline(selected_user, df):
+    df = df.dropna(subset=['date'])
+
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
@@ -117,8 +119,9 @@ def monthly_timeline(selected_user, df):
     timeline['time'] = time
     return timeline
 
-
 def daily_timeline(selected_user, df):
+    df = df.dropna(subset=['date'])
+
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
@@ -127,13 +130,16 @@ def daily_timeline(selected_user, df):
 
 
 def week_activity_map(selected_user, df):
+
+
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
     return df['day_name'].value_counts()
 
-
 def monthly_activity_map(selected_user, df):
+    df = df.dropna(subset=['date'])
+
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
@@ -141,6 +147,8 @@ def monthly_activity_map(selected_user, df):
 
 
 def activity_heatmap(selected_user, df):
+    df = df.dropna(subset=['date'])
+
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
