@@ -125,23 +125,33 @@ def daily_timeline(selected_user, df):
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
+    if df.empty:
+        return pd.DataFrame(columns=['only_date', 'message'])
+
     daily_timeline = df.groupby('only_date').count()['message'].reset_index()
     return daily_timeline
 
 
 def week_activity_map(selected_user, df):
-
+    df = df.dropna(subset=['date'])
 
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
 
+    if df.empty:
+        return pd.Series(dtype=int)
+
     return df['day_name'].value_counts()
+
 
 def monthly_activity_map(selected_user, df):
     df = df.dropna(subset=['date'])
 
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
+
+    if df.empty:
+        return pd.Series(dtype=int)
 
     return df['month'].value_counts()
 
@@ -151,6 +161,9 @@ def activity_heatmap(selected_user, df):
 
     if selected_user != 'Overall':
         df = df[df['user'] == selected_user]
+
+    if df.empty:
+        return pd.DataFrame()
 
     user_heatmap = df.pivot_table(
         index='day_name',
