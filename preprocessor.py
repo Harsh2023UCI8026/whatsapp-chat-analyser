@@ -1,39 +1,109 @@
+
+# import re
+# import pandas as pd
+#
+# def preprocess(data):
+#
+#     # Pattern for AM/PM WhatsApp date format
+#     pattern = r'\d{2}\/\d{2}\/\d{2},\s+\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)\s+-'
+#
+#     messages = re.split(pattern, data)[1:]
+#     dates = re.findall(pattern, data)
+#
+#     df = pd.DataFrame({
+#         'user_message': messages,
+#         'message_date': dates
+#     })
+#
+#     # Fix Unicode narrow space
+#     df['message_date'] = df['message_date'].astype(str).str.replace('\u202f', ' ', regex=False)
+#
+#     # Convert message_date → datetime
+#     df['date'] = pd.to_datetime(
+#         df['message_date'],
+#         format='%d/%m/%y, %I:%M %p -',
+#         errors='coerce'                      # Invalid dates become NaT instead of crashing
+#     )
+#
+#     # Split user and message
+#     users = []
+#     msgs = []
+#
+#     for m in df['user_message']:
+#         parts = re.split(r'^(.*?):\s', m, maxsplit=1)
+#         if len(parts) == 3:
+#             users.append(parts[1])
+#             msgs.append(parts[2])
+#         else:
+#             users.append("Group Notification aaya hai harsh")
+#             msgs.append(m)
+#
+#     df['user'] = users
+#     df['message'] = msgs
+#     df.drop(columns=['user_message'], inplace=True)
+#
+#     # Extract date components (safe even if NaT exists)
+#     df['year'] = df['date'].dt.year
+#     df['month_num'] = df['date'].dt.month
+#     df['month'] = df['date'].dt.month_name()
+#     df['day'] = df['date'].dt.day
+#     df['day_name'] = df['date'].dt.day_name()
+#     df['only_date'] = df['date'].dt.date
+#     df['hour'] = df['date'].dt.hour
+#     df['minute'] = df['date'].dt.minute
+#
+#     # Create periods
+#     period = []
+#     for hour in df['hour']:
+#         if pd.isna(hour):
+#             period.append("NA")
+#         elif hour == 23:
+#             period.append("23-00")
+#         elif hour == 0:
+#             period.append("00-01")
+#         else:
+#             period.append(f"{hour}-{hour+1}")
+#
+#     df['period'] = period
+#
+#     return df
+#
+
 import re
 import pandas as pd
 
 def preprocess(data):
-    pattern = r'\d{2}\/\d{2}\/\d{2},\s+\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)\s+-'
-    # pattern = r"^(\d{1,2}\/\d{1,2}\/\d{2,4}), (\d{1,2}:\d{2}(?:\s?[ap]m)?) - (.*?): (.*)"
+
+    # 🔥 Match BOTH formats:
+    # 12-hour (AM/PM)  AND  24-hour
+    pattern = r'\d{1,2}\/\d{1,2}\/\d{2,4},\s+\d{1,2}:\d{2}(?:\s?[APap][Mm])?\s+-'
 
     messages = re.split(pattern, data)[1:]
     dates = re.findall(pattern, data)
 
     df = pd.DataFrame({
         'user_message': messages,
-        'message_date': dates
+        'raw_date': dates
     })
 
-    # Fix Unicode narrow space issue
-    df['message_date'] = df['message_date'].astype(str).str.replace('\u202f', ' ', regex=False)
+    # Fix WhatsApp hidden space (U+202F)
+    df['raw_date'] = df['raw_date'].astype(str).str.replace('\u202f', ' ', regex=False)
 
-    # Convert to datetime
-    df['message_date'] = pd.to_datetime(
-        df['message_date'],
-        format='%d/%m/%y, %I:%M %p -'
+    # ✅ AUTO-detect datetime format
+    df['date'] = pd.to_datetime(
+        df['raw_date'],
+        errors='coerce'   # invalid → NaT (no crash)
     )
 
-    # Rename
-    df.rename(columns={'message_date': 'date'}, inplace=True)
+    # Drop rows where date couldn't be parsed
+    df = df.dropna(subset=['date'])
 
-    # username aur messages ko separate kro
-    df = pd.DataFrame({'user_message': messages, 'message_date': dates})
-
+    # Split user & message
     users = []
     msgs = []
 
     for m in df['user_message']:
         parts = re.split(r'^(.*?):\s', m, maxsplit=1)
-
         if len(parts) == 3:
             users.append(parts[1])
             msgs.append(parts[2])
@@ -45,36 +115,19 @@ def preprocess(data):
     df['message'] = msgs
     df.drop(columns=['user_message'], inplace=True)
 
-    # Fix special WhatsApp space (U+202F)
-    df['date'] = [d.replace('\u202f', ' ') for d in dates]
-
-    # Convert to datetime
-    df['date'] = pd.to_datetime(
-        df['date'],
-        format='%d/%m/%y, %I:%M %p -',
-        errors='coerce'
-    )
-
-    # Extract year, month, day
+    # Date features
     df['year'] = df['date'].dt.year
     df['month_num'] = df['date'].dt.month
-    df['only_date'] = df['date'].dt.date
     df['month'] = df['date'].dt.month_name()
     df['day'] = df['date'].dt.day
     df['day_name'] = df['date'].dt.day_name()
+    df['only_date'] = df['date'].dt.date
     df['hour'] = df['date'].dt.hour
     df['minute'] = df['date'].dt.minute
-    df['weekday'] = df['date'].dt.day_name()
 
-    period = []
-    for hour in df[['day_name', 'hour']]['hour']:
-        if hour == 23:
-            period.append(str(hour) + "-" + str("00"))
-        elif hour == 0:
-            period.append(str("00") + "-" + str(hour + 1))
-        else:
-            period.append(str(hour) + "-" + str(hour + 1))
-
-    df['period'] = period
+    # Create time periods (for heatmap)
+    df['period'] = df['hour'].apply(
+        lambda h: f"{h}-{(h+1)%24}"
+    )
 
     return df
